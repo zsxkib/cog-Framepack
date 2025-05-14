@@ -19,7 +19,7 @@ It works efficiently on different kinds of hardware, from consumer GPUs (like RT
 *   **NVIDIA GPU**: You need an NVIDIA GPU. This setup adjusts memory use for different GPUs:
     *   **Consumer GPUs (like RTX 4090 with about 24GB video memory)**: Runs in a low video memory mode, moving parts of the model around to save space.
     *   **Datacenter GPUs (like A100/H100 with 40GB or more video memory)**: Runs in a high video memory mode with models loaded on the GPU for more speed.
-    *   This usually changes if you have less than 30GB of video memory (see `predict.py`).
+    *   This usually changes if you have less than 65GB of video memory (see `predict.py`).
 
 ## Run locally
 
@@ -27,8 +27,8 @@ Cog makes it easier to run FramePack locally. It handles building the container 
 
 1.  **Clone this repository:**
     ```bash
-    git clone https://github.com/YOUR_USERNAME/YOUR_COG_FRAMEPACK_REPO.git # <-- TODO: Update this URL
-    cd YOUR_COG_FRAMEPACK_REPO 
+    git clone https://github.com/zsxkib/cog-Framepack.git
+    cd cog-Framepack
     ```
 
 2.  **Run the model:**

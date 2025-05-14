@@ -37,7 +37,7 @@ from diffusers_helper.clip_vision import hf_clip_vision_encode
 from diffusers_helper.bucket_tools import find_nearest_bucket
 
 # VRAM threshold for low_vram_mode (e.g., less than 30GB)
-LOW_VRAM_THRESHOLD_GB = 30.0 
+LOW_VRAM_THRESHOLD_GB = 65.0 
 # Default preserved memory for transformer operations in low VRAM mode (from demo)
 DEFAULT_GPU_PRESERVED_MEMORY_TRANSFORMER_LOAD_GB = 6
 DEFAULT_GPU_PRESERVED_MEMORY_TRANSFORMER_OFFLOAD_GB = 8
