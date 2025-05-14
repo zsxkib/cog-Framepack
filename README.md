@@ -1,16 +1,18 @@
-# FramePack: Cog implementation for advanced video generation
+# FramePack (Non-F1 Variant): Cog implementation for advanced video generation
 
 [![Replicate](https://replicate.com/zsxkib/framepack/badge)](https://replicate.com/zsxkib/framepack)
 
-This repository has a Cog container for **FramePack**, a video generation model that creates videos bit by bit from an image and a text prompt. This setup is made for Cog, using an API-first approach, and is based on ideas from the original [FramePack project](https://lllyasviel.github.io/frame_pack_gitpage/).
+This repository has a Cog container for the **non-F1 (original) variant of FramePack**, a video generation model that creates videos bit by bit from an image and a text prompt. This setup is made for Cog, using an API-first approach, and is based on ideas from the original [FramePack project](https://lllyasviel.github.io/frame_pack_gitpage/).
+
+**This implementation specifically uses the `lllyasviel/FramePackI2V_HY` transformer model.** An F1 variant with a different transformer (`lllyasviel/FramePack_F1_I2V_HY_20250503`) also exists and will be available in a separate repository.
 
 It works efficiently on different kinds of hardware, from consumer GPUs (like RTX 4090) to high-end datacenter GPUs (A100s/H100s), because it adjusts how it uses memory (you can see the details in `predict.py`).
 
-**Model links and information:**
+**Model links and information (Non-F1 Variant):**
 *   Original Project Page: [lllyasviel.github.io/frame_pack_gitpage/](https://lllyasviel.github.io/frame_pack_gitpage/)
 *   Original Paper (Arxiv): [arxiv.org/abs/2504.12626](https://arxiv.org/abs/2504.12626)
-*   The main transformer model used here is `lllyasviel/FramePackI2V_HY`.
-*   This Cog packaging by: [zsxkib on GitHub](https://github.com/zsxkib) / [@zsakib\_ on Twitter](https://twitter.com/zsakib_)
+*   The main transformer model used here is **`lllyasviel/FramePackI2V_HY` (Non-F1 Variant)**.
+*   This Cog packaging by: [zsxkib on GitHub](https://github.com/zsxkib) / [@zsakib\\_ on Twitter](https://twitter.com/zsakib_)
 
 ## Prerequisites
 
@@ -66,20 +68,20 @@ Cog makes it easier to run FramePack locally. It handles building the container 
 
 ## How it works
 
-Cog uses `cog.yaml` to set up the Python environment, system packages, and other dependencies. The main logic for making videos is in `predict.py`.
+Cog uses `cog.yaml` to set up the Python environment, system packages, and other dependencies. The main logic for making videos is in `predict.py`, which implements the **non-F1 variant** of FramePack.
 
 *   **`setup()` method**: This is called when the Cog worker starts.
     1.  It sets up cache directories (for example, for Hugging Face models).
-    2.  It checks if a GPU is available and how much video memory (VRAM) it has. This helps decide if it should run in `low_vram_mode` (usually if VRAM is less than 30GB).
+    2.  It checks if a GPU is available and how much video memory (VRAM) it has. This helps decide if it should run in `low_vram_mode` (usually if VRAM is less than 65GB).
     3.  It loads these models:
         *   Text Encoders: `LlamaModel` and `CLIPTextModel` from `hunyuanvideo-community/HunyuanVideo` (to understand your text prompt).
         *   VAE: `AutoencoderKLHunyuanVideo` from `hunyuanvideo-community/HunyuanVideo` (to handle the image data).
         *   Image Encoder: `SiglipVisionModel` from `lllyasviel/flux_redux_bfl` (to understand the input image).
-        *   Transformer: `HunyuanVideoTransformer3DModelPacked` from `lllyasviel/FramePackI2V_HY` (the main model that creates the video frames).
+        *   Transformer: **`HunyuanVideoTransformer3DModelPacked` from `lllyasviel/FramePackI2V_HY` (this is the non-F1 transformer)**.
     4.  If your computer is in low video memory mode, models are first loaded to the CPU and moved to/from the GPU when needed. In high video memory mode, they stay on the GPU.
     5.  It uses optimizations like VAE slicing/tiling and `DynamicSwapInstaller` (if they apply and are turned on in `predict.py`) in low video memory mode to help manage memory.
 
-*   **`predict()` method**: This handles how the video is made, based on what you provide.
+*   **`predict()` method**: This handles how the video is made, based on what you provide, using the non-F1 model's specific context handling logic.
     1.  It takes inputs like `input_image`, `prompt`, `total_video_length_seconds`, and others (see "Model parameters").
     2.  It encodes your text prompts and gets the input image ready (resizing it, and using the VAE and CLIP vision models to process it). It manages moving models between the CPU and GPU if your computer is in low video memory mode.
     3.  It makes the video in sections, one after the other:
@@ -111,10 +113,10 @@ You can give these parameters to `cog predict` with the `-i` flag (for example, 
 
 The code in this repository for packaging the FramePack model with Cog uses the MIT License. See the [LICENSE](LICENSE) file for details.
 
-Please see the original FramePack project for license information about the model files and original code. The model code and weights are under the Apache License 2.0 (see [LICENSE](LICENSE)), while the implementation code in [predict.py](predict.py) is under the MIT License. The other libraries and models this project uses (like Hugging Face Transformers, Diffusers, Hunyuan-DiT) each have their own licenses. These are often open-source licenses like Apache 2.0.
+Please see the original FramePack project for license information about the model files and original code. The model code and weights for this **non-F1 variant** (e.g., `lllyasviel/FramePackI2V_HY`) are under the Apache License 2.0 (see [LICENSE](LICENSE)), while the implementation code in [predict.py](predict.py) is under the MIT License. The other libraries and models this project uses (like Hugging Face Transformers, Diffusers, Hunyuan-DiT) each have their own licenses. These are often open-source licenses like Apache 2.0.
 
 ---
 
-⭐ Star this on [GitHub](https://github.com/zsxkib/cog-Framepack)!
+⭐ Star this (Non-F1 Variant) on [GitHub](https://github.com/zsxkib/cog-Framepack)!
 
 👋 Follow `zsxkib` on [Twitter/X](https://twitter.com/zsakib_)
