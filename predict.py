@@ -199,18 +199,18 @@ class Predictor(BasePredictor):
     @torch.no_grad()
     def predict(
         self,
-        input_image: Path = Input(description="Input image for video generation."),
+        input_image: Path = Input(description="Initial image for video generation."),
         prompt: str = Input(description="Text prompt describing the desired video content."),
-        negative_prompt: str = Input(description="Negative text prompt to specify what to avoid.", default=""),
-        seed: Optional[int] = Input(description="Random seed. Leave blank for a random seed.", default=None),
-        total_video_length_seconds: float = Input(description="Total video length in seconds. Max 10s for API stability.", default=3.0, ge=1.0, le=10.0),
-        latent_window_size: int = Input(description="Latent window size. Advanced setting, default is recommended.", default=9, ge=1, le=16),
-        steps: int = Input(description="Number of inference steps. Advanced setting, default is recommended.", default=25, ge=1, le=50),
-        cfg_scale: float = Input(description="Classifier-Free Guidance scale. Advanced setting, default is recommended.", default=1.0, ge=1.0, le=32.0),
-        distilled_cfg_scale: float = Input(description="Distilled CFG scale. Advanced setting, default is recommended.", default=10.0, ge=1.0, le=32.0),
-        cfg_rescale: float = Input(description="CFG rescale factor. Advanced setting, default is recommended.", default=0.0, ge=0.0, le=1.0),
-        use_teacache: bool = Input(description="Use TeaCache for potentially faster speed (may slightly alter results).", default=True),
-        mp4_crf: int = Input(description="MP4 Constant Rate Factor (0-51, lower is better quality, ~23 is a good balance).", default=23, ge=0, le=51)
+        negative_prompt: str = Input(description="Text prompt specifying elements to avoid in the video.", default=""),
+        seed: Optional[int] = Input(description="Random seed for reproducible results. Leave blank for a random seed.", default=None),
+        total_video_length_seconds: float = Input(description="Total video length in seconds. Max 10s is recommended for API stability and performance.", default=3.0, ge=1.0, le=10.0),
+        latent_window_size: int = Input(description="Size of latent window (video chunk) for progressive generation. Default (9) is tuned for the model.", default=9, ge=1, le=16),
+        steps: int = Input(description="Number of diffusion steps per video segment. More steps can increase detail but take longer; fewer steps are faster but may reduce quality.", default=25, ge=1, le=50),
+        cfg_scale: float = Input(description="Classifier-Free Guidance scale. Higher values enforce stronger prompt adherence; lower values encourage more creativity.", default=1.0, ge=1.0, le=32.0),
+        distilled_cfg_scale: float = Input(description="Distilled CFG scale. Similar to `cfg_scale`, influences prompt adherence for the model's distilled components.", default=10.0, ge=1.0, le=32.0),
+        cfg_rescale: float = Input(description="Guidance rescale factor (0.0-1.0). Helps prevent oversaturation at high CFG values; 0.0 to disable.", default=0.0, ge=0.0, le=1.0),
+        use_teacache: bool = Input(description="Enable TeaCache for potentially faster inference (may slightly alter results).", default=True),
+        mp4_crf: int = Input(description="MP4 Constant Rate Factor (0-51). Lower values mean better video quality and larger file size; ~23 is a good balance.", default=23, ge=0, le=51)
     ) -> Path:
         """Generates a video based on an initial image and a text prompt."""
 
@@ -349,8 +349,28 @@ class Predictor(BasePredictor):
             if history_pixels_on_cpu is None: 
                 history_pixels_on_cpu = self._managed_vae_decode(current_total_valid_latents_cpu.to(self.device))
             else:
-                newly_decoded_pixels_segment_cpu = self._managed_vae_decode(generated_latents_current_segment_cpu.to(self.device))
-                history_pixels_on_cpu = soft_append_bcthw(newly_decoded_pixels_segment_cpu, history_pixels_on_cpu, num_pixel_frames_per_segment)
+                # Align with demo_gradio.py: decode a specific segment length from history for soft_append_bcthw
+                _is_last_section = is_last_section_in_padding_logic
+                _lws = latent_window_size
+
+                # Calculate the number of latent frames to decode for the current pixel segment,
+                # similar to 'section_latent_frames' in demo_gradio.py.
+                # This is typically a larger chunk of recent history (around 2 * latent_window_size).
+                frames_to_decode_for_append = (_lws * 2 + 1) if _is_last_section else (_lws * 2)
+
+                # Slice the required number of latent frames from the front of current_total_valid_latents_cpu
+                # (which stores newest latents first).
+                latents_for_current_pixels = current_total_valid_latents_cpu[:, :, :frames_to_decode_for_append]
+                
+                newly_decoded_pixels_segment_cpu = self._managed_vae_decode(latents_for_current_pixels.to(self.device))
+                
+                # num_pixel_frames_per_segment (LWS*4-3) serves as the 'overlap_frames' parameter.
+                # The newly_decoded_pixels_segment_cpu (from ~2*LWS latents) will be longer than this overlap.
+                history_pixels_on_cpu = soft_append_bcthw(
+                    newly_decoded_pixels_segment_cpu, 
+                    history_pixels_on_cpu, 
+                    num_pixel_frames_per_segment 
+                )
 
             save_bcthw_as_mp4(history_pixels_on_cpu, final_output_path_str, fps=30, crf=mp4_crf)
             print(f"  Updated video saved: {final_output_path_str}, total pixel frames: {history_pixels_on_cpu.shape[2]}")
